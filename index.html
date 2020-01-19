@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Canvas Downloader</title>
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
+    }
+
+    #J_Downloader {
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="J_Downloader">
+    <canvas id="J_Progress"></canvas>
+    <h2><span id="J_Percentage"></span>%</h2>
+  </div>
+
+  <script>
+    const canvasEle = document.getElementById('J_Progress')
+    const imgEle = new Image()
+    const imgUrl = './a733da0c66f65259163a32327a3823aa1e96a593.jpg'
+    let dataRGB = null
+    let dataGray = null
+
+    let progressCol = 0
+    let progressColMax = 0
+    let progressStep = 4
+    const percentageEle = document.getElementById('J_Percentage')
+
+    const colorToGrayscale = (rgba) => {
+      const R = rgba.r
+      const G = rgba.g
+      const B = rgba.b
+      const A = rgba.a
+
+      // 灰度公式
+      // https://stackoverflow.com/questions/596216/formula-to-determine-brightness-of-rgb-color
+      const luminanceStd = 0.2126 * R + 0.7152 * G + 0.0722 * B
+      const luminanceOpt1 = 0.299 * R + 0.587 * G + 0.114 * B
+      const luminanceOpt2 = Math.sqrt(0.299 * Math.pow(R, 2) + 0.587 * Math.pow(G, 2) + 0.114 * Math.pow(B, 2))
+
+      const grayColor = luminanceStd
+
+      return grayColor
+    }
+
+    const drawImgCanvas = (img, canvas) => {
+      const cWidth = img.width
+      const cHeight = img.height
+      const offsetX = 0
+      const offsetY = 0
+      const c = canvas // Canvas object
+      const ctx = c.getContext('2d') // Canvas painting place
+
+      c.width = cWidth
+      c.height = cHeight
+      progressColMax = cWidth
+      ctx.drawImage(img, offsetX, offsetY, c.width, c.height)
+
+      // Turn image color to grayscale
+      // 注意：getImageData方法需要读取同源下的图片资源，否则会浏览器抛出一个安全异常
+      const imgData = ctx.getImageData(offsetX, offsetY, c.width, c.height)
+
+      // Cache rgb data
+      dataRGB = imgData.data.slice()
+
+      // console.log(imgData);
+
+      for (let i = 0; i < imgData.data.length; i += progressStep) {
+        const grayColor = colorToGrayscale({
+          r: imgData.data[i],
+          g: imgData.data[i + 1],
+          b: imgData.data[i + 2]
+        })
+        imgData.data[i] = grayColor
+        imgData.data[i + 1] = grayColor
+        imgData.data[i + 2] = grayColor
+        imgData.data[i + 3] = 255
+      }
+
+      ctx.putImageData(imgData, offsetX, offsetY)
+
+      // Cache gray data
+      dataGray = imgData.data.slice()
+    }
+
+    const progressImage = () => {
+      if (!dataRGB) {
+        return
+      }
+
+      const c = canvasEle
+      const offsetX = 0
+      const offsetY = 0
+      const ctx = c.getContext('2d') // Canvas painting place
+      const imgDataGray = ctx.getImageData(offsetX, offsetY, c.width, c.height) // Grayscale data
+
+      return () => {
+
+        //#region 从上至下渲染
+        // // 渲染行
+        // for (let j = 0; j < c.height; j += 1) {
+        //   // 渲染每行的像素
+        //   for (let i = 0; i < c.width * progressStep; i += progressStep) {
+        //     imgDataGray.data[j * c.width * progressStep + i] = dataRGB[j * c.width * progressStep + i]
+        //     imgDataGray.data[j * c.width * progressStep + i + 1] = dataRGB[j * c.width * progressStep + i + 1]
+        //     imgDataGray.data[j * c.width * progressStep + i + 2] = dataRGB[j * c.width * progressStep + i + 2]
+        //     imgDataGray.data[j * c.width * progressStep + i + 3] = dataRGB[j * c.width * progressStep + i + 3]
+        //   }
+        // }
+        //#endregion
+
+        //#region 从左至右渲染
+        // // 渲染列
+        // for (let j = 0; j < c.width * progressStep; j += progressStep) {
+        //   // 渲染每列的像素
+        //   for (let i = 0; i < c.height; i += 1) {
+        //     imgDataGray.data[i * c.width * progressStep + j] = dataRGB[i * c.width * progressStep + j]
+        //     imgDataGray.data[i * c.width * progressStep + j + 1] = dataRGB[i * c.width * progressStep + j + 1]
+        //     imgDataGray.data[i * c.width * progressStep + j + 2] = dataRGB[i * c.width * progressStep + j + 2]
+        //     imgDataGray.data[i * c.width * progressStep + j + 3] = dataRGB[i * c.width * progressStep + j + 3]
+        //   }
+        // }
+        //#endregion
+
+        // 渲染每列的像素
+        for (let i = 0; i < c.height; i += 1) {
+          imgDataGray.data[i * c.width * progressStep + progressCol] = dataRGB[i * c.width * progressStep +
+            progressCol]
+          imgDataGray.data[i * c.width * progressStep + progressCol + 1] = dataRGB[i * c.width * progressStep +
+            progressCol + 1]
+          imgDataGray.data[i * c.width * progressStep + progressCol + 2] = dataRGB[i * c.width * progressStep +
+            progressCol + 2]
+          imgDataGray.data[i * c.width * progressStep + progressCol + 3] = dataRGB[i * c.width * progressStep +
+            progressCol + 3]
+        }
+
+        ctx.putImageData(imgDataGray, offsetX, offsetY)
+        progressCol += progressStep
+
+        percentageEle.innerHTML = Math.round(progressCol / (progressColMax * progressStep) * 100)
+
+      }
+
+    }
+
+    imgEle.onload = () => {
+      // console.log(this) // this->window ???
+
+      imgEle.setAttribute('width', imgEle.width / 1.2)
+      imgEle.setAttribute('height', imgEle.height / 1.2)
+
+      drawImgCanvas(imgEle, canvasEle)
+
+      const progressAnimation = progressImage()
+      const progress = (timestamp) => {
+        // console.log(percentage);
+        if (progressCol < progressColMax * progressStep) {
+          progressAnimation()
+          window.requestAnimationFrame(progress)
+        }
+      }
+
+      window.requestAnimationFrame(progress)
+    }
+    imgEle.setAttribute('src', imgUrl)
+
+
+    let startTime = null
+    let duration = 10 * 1000 // 10s
+
+    // const progress = (timestamp) => {
+    //   if (!startTime) startTime = timestamp
+    //   let curTime = timestamp - startTime
+
+    //   if (curTime < duration) {
+    //     console.log('curTime', curTime, 'timestamp', timestamp)
+    //     requestAnimationFrame(progress)
+    //   }
+    // }
+
+    // window.requestAnimationFrame(progress)
+  </script>
+
+</body>
+
+</html>
