@@ -15,6 +15,30 @@
     #J_Downloader {
       text-align: center;
     }
+
+    .complete {
+      margin: .2rem 0;
+      transform: translateY(-100%);
+      opacity: 0;
+      transition: transform .5s ease-out;
+    }
+
+    .complete.done {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .percentage {
+      margin: .2rem 0;
+      transform: translateY(-100%);
+      opacity: 1;
+      transition: transform .5s ease-in;
+    }
+
+    .percentage.done {
+      transform: translateY(0);
+      opacity: 0;
+    }
   </style>
 </head>
 
@@ -22,7 +46,12 @@
 
   <div id="J_Downloader">
     <canvas id="J_Progress"></canvas>
-    <h2><span id="J_Percentage"></span>%</h2>
+    <p class="complete J_Text">
+      Done!
+    </p>
+    <p class="percentage J_Text">
+      <span id="J_Percentage"></span> %
+    </p>
   </div>
 
   <script>
@@ -157,8 +186,8 @@
     imgEle.onload = () => {
       // console.log(this) // this->window ???
 
-      imgEle.setAttribute('width', imgEle.width / 1.2)
-      imgEle.setAttribute('height', imgEle.height / 1.2)
+      imgEle.setAttribute('width', imgEle.width / 1.8)
+      imgEle.setAttribute('height', imgEle.height / 1.8)
 
       drawImgCanvas(imgEle, canvasEle)
 
@@ -168,6 +197,10 @@
         if (progressCol < progressColMax * progressStep) {
           progressAnimation()
           window.requestAnimationFrame(progress)
+        } else {
+          document.querySelectorAll('.J_Text').forEach(node => {
+            node.classList.add('done')
+          })
         }
       }
 
